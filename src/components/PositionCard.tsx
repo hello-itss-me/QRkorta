@@ -2,7 +2,7 @@ import React, { useState, useRef, useEffect, useMemo } from 'react';
 import { Position, RepairItem, GroupedRepairItem } from '../types';
 import GroupedRepairItemCard from './GroupedRepairItemCard';
 import { groupSimilarItems, getBasePositionName } from '../utils/groupingUtils';
-import { Settings, Trash2, RussianRuble as Ruble, Edit3, Check, X, ChevronDown, ChevronUp, Minimize2, Maximize2, TrendingUp, TrendingDown, PlusCircle, Copy, Building2 } from 'lucide-react';
+import { Settings, Trash2, RussianRuble as Ruble, CreditCard as Edit3, Check, X, ChevronDown, ChevronUp, Minimize2, Maximize2, TrendingUp, TrendingDown, PlusCircle, Copy, Building2 } from 'lucide-react';
 
 interface PositionCardProps {
   position: Position;
