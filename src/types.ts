@@ -22,6 +22,8 @@ export interface Position {
   totalPrice: number;
   totalIncome: number;
   totalExpense: number;
+  subdivisionId?: string | null;
+  subdivisionName?: string | null;
 }
 
 export interface GroupedRepairItem {

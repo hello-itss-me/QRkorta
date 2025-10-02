@@ -62,6 +62,7 @@ export const ExportToSupabaseButton: React.FC<ExportToSupabaseButtonProps> = ({
             counterparty_name: selectedCounterparty.name,
             document_new: selectedUpdDocument.document_name,
             upd_status: selectedUpdDocument.status || 'УПД проведены', // Используем статус из выбранного UPD
+            subdivision_id: position.subdivisionId || null,
           })
           .select('id') // Select the ID to construct the URL
           .single();

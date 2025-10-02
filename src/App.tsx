@@ -28,6 +28,8 @@ import TemplateSelector from './components/TemplateSelector';
 import { HotkeySettingsModal } from './components/HotkeySettingsModal';
 import { HotkeyAction, HotkeyMap } from './hooks/useHotkeys';
 import QrCodeDetailsViewer from './components/QrCodeDetailsViewer'; // Импортируем новый компонент
+import { SubdivisionSelector } from './components/SubdivisionSelector';
+import { Subdivision } from './hooks/useSubdivisions';
 
 function App() {
   const [session, setSession] = useState<Session | null>(null);
@@ -49,6 +51,7 @@ function App() {
   const [isTemplateSelectorOpen, setIsTemplateSelectorOpen] = useState(false);
   const [isHotkeySettingsOpen, setIsHotkeySettingsOpen] = useState(false);
   const [qrDetailsPositionId, setQrDetailsPositionId] = useState<string | null>(null); // Состояние для просмотра деталей QR
+  const [subdivisionSelectorState, setSubdivisionSelectorState] = useState<{ positionId: string } | null>(null);
   const [hotkeys, setHotkeys] = useState<HotkeyMap>({
     toggleLevel1: 'Alt+1',
     toggleLevel2: 'Alt+2',
@@ -876,11 +879,58 @@ function App() {
     setIsCounterpartySelectorOpen(false);
   };
 
-  const handleLoadPositionsForEditing = (positionsToLoad: SavedPosition[], allItems: RepairItem[][]) => {
+  const handleOpenSubdivisionSelector = (positionId: string) => {
+    setSubdivisionSelectorState({ positionId });
+  };
+
+  const handleSelectSubdivision = (subdivision: Subdivision | null) => {
+    if (!subdivisionSelectorState) return;
+
+    const { positionId } = subdivisionSelectorState;
+
+    setPositions(prevPositions =>
+      prevPositions.map(pos =>
+        pos.id === positionId
+          ? {
+              ...pos,
+              subdivisionId: subdivision?.id || null,
+              subdivisionName: subdivision?.name || null,
+            }
+          : pos
+      )
+    );
+
+    setSubdivisionSelectorState(null);
+  };
+
+  const handleLoadPositionsForEditing = async (positionsToLoad: SavedPosition[], allItems: RepairItem[][]) => {
     if (positions.length > 0 || unallocatedItems.length > 0) {
         if (!window.confirm('Загрузка данных из архива приведет к потере текущей работы. Продолжить?')) {
             return;
         }
+    }
+
+    const subdivisionIds = positionsToLoad
+      .map(pos => (pos as any).subdivision_id)
+      .filter(Boolean);
+
+    let subdivisionMap: Record<string, string> = {};
+    if (subdivisionIds.length > 0) {
+      try {
+        const { data: subdivisions } = await supabase
+          .from('subdivisions')
+          .select('id, name')
+          .in('id', subdivisionIds);
+
+        if (subdivisions) {
+          subdivisionMap = subdivisions.reduce((acc, sub) => {
+            acc[sub.id] = sub.name;
+            return acc;
+          }, {} as Record<string, string>);
+        }
+      } catch (error) {
+        console.error('Error loading subdivisions:', error);
+      }
     }
 
     const newPositions: Position[] = positionsToLoad
@@ -888,12 +938,15 @@ function App() {
         const items = allItems[index];
         if (!items) return null;
         const totals = recalculatePositionTotals(items);
+        const subdivisionId = (pos as any).subdivision_id || null;
         return {
             id: `loaded-${pos.id}-${Date.now()}-${index}`,
-            originalId: pos.id, // Сохраняем оригинальный ID из БД
+            originalId: pos.id,
             service: pos.service,
             positionNumber: pos.position_number,
             items: items,
+            subdivisionId,
+            subdivisionName: subdivisionId ? subdivisionMap[subdivisionId] || null : null,
             ...totals
         };
       })
@@ -902,16 +955,15 @@ function App() {
       .map((p, i) => ({ ...p, positionNumber: i + 1 }));
 
     const firstPosition = positionsToLoad[0];
-    
-    // Создаем объект UpdDocument из загруженных данных
+
     const loadedUpdDocument: UpdDocument | null = firstPosition ? {
-        id: `temp-loaded-${Date.now()}`, // Временный ID для загруженного документа
+        id: `temp-loaded-${Date.now()}`,
         created_at: new Date().toISOString(),
         counterparty_name: firstPosition.counterparty_name || '',
         document_name: firstPosition.document_new || '',
-        document_date: null, // Если нет в SavedPosition, оставляем null
-        contract: null, // Если нет в SavedPosition, оставляем null
-        status: firstPosition.upd_status || null, // Используем статус из SavedPosition
+        document_date: null,
+        contract: null,
+        status: firstPosition.upd_status || null,
         is_active: true,
     } : null;
 
@@ -924,10 +976,10 @@ function App() {
     setPositions(newPositions);
     setUnallocatedItems([]);
     setNextPositionNumber(newPositions.length + 1);
-    setSelectedUpdDocument(loadedUpdDocument); // Обновлено
+    setSelectedUpdDocument(loadedUpdDocument);
     setSelectedCounterparty(tempCounterparty);
     setIsViewerOpen(false);
-    
+
     alert(`Загружено ${newPositions.length} позиций для редактирования.`);
   };
 
@@ -1146,6 +1198,8 @@ function App() {
                       onReplaceItem={handleShowReplacer}
                       onAddNewItemToWorkGroup={(positionId, workType) => setNewItemFormState({ positionId, workType })}
                       onAddNewWorkGroup={handleShowNewWorkGroupForm}
+                      onSelectSubdivision={handleOpenSubdivisionSelector}
+                      subdivisionName={position.subdivisionName}
                     />
                   ))}
                 </div>
@@ -1241,6 +1295,14 @@ function App() {
             // Optionally, navigate back to the main view or a specific route
             window.history.pushState({}, '', '/'); // Reset URL
           }}
+        />
+      )}
+      {subdivisionSelectorState && (
+        <SubdivisionSelector
+          isOpen={true}
+          onClose={() => setSubdivisionSelectorState(null)}
+          onSelect={handleSelectSubdivision}
+          currentSubdivisionId={positions.find(p => p.id === subdivisionSelectorState.positionId)?.subdivisionId}
         />
       )}
     </>

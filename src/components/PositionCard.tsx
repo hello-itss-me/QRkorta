@@ -2,7 +2,7 @@ import React, { useState, useRef, useEffect, useMemo } from 'react';
 import { Position, RepairItem, GroupedRepairItem } from '../types';
 import GroupedRepairItemCard from './GroupedRepairItemCard';
 import { groupSimilarItems, getBasePositionName } from '../utils/groupingUtils';
-import { Settings, Trash2, RussianRuble as Ruble, Edit3, Check, X, ChevronDown, ChevronUp, Minimize2, Maximize2, TrendingUp, TrendingDown, PlusCircle, Copy } from 'lucide-react';
+import { Settings, Trash2, RussianRuble as Ruble, Edit3, Check, X, ChevronDown, ChevronUp, Minimize2, Maximize2, TrendingUp, TrendingDown, PlusCircle, Copy, Building2 } from 'lucide-react';
 
 interface PositionCardProps {
   position: Position;
@@ -21,6 +21,8 @@ interface PositionCardProps {
   onReplaceItem?: (positionId: string, item: GroupedRepairItem) => void;
   onAddNewItemToWorkGroup: (positionId: string, workType: string) => void;
   onAddNewWorkGroup: (positionId: string) => void;
+  onSelectSubdivision?: (positionId: string) => void;
+  subdivisionName?: string | null;
 }
 
 interface WorkTypeGroup {
@@ -52,6 +54,8 @@ const PositionCard: React.FC<PositionCardProps> = ({
   onReplaceItem,
   onAddNewItemToWorkGroup,
   onAddNewWorkGroup,
+  onSelectSubdivision,
+  subdivisionName,
 }) => {
   const [isEditing, setIsEditing] = useState(false);
   const [editValue, setEditValue] = useState(position.service);
@@ -411,7 +415,21 @@ const PositionCard: React.FC<PositionCardProps> = ({
               )}
             </button>
           )}
-          
+
+          {onSelectSubdivision && (
+            <button
+              onClick={() => onSelectSubdivision(position.id)}
+              className={`p-2 rounded-lg transition-colors ${
+                subdivisionName
+                  ? 'text-purple-600 bg-purple-50 hover:bg-purple-100'
+                  : 'text-gray-500 hover:text-purple-600 hover:bg-purple-50'
+              }`}
+              title={subdivisionName ? `Подразделение: ${subdivisionName}` : 'Выбрать подразделение'}
+            >
+              <Building2 className="w-4 h-4" />
+            </button>
+          )}
+
           <button
             onClick={() => setIsEditing(true)}
             className="p-2 text-gray-500 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
